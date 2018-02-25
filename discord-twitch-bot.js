@@ -3,7 +3,7 @@
 // DEPENDENCIES
 console.log("Loading dependencies")
 var fs = require("fs") // built-in to nodejs
-var Discord = require("discord.io") // install using npm install Woor/discord.io
+var Discord = require("discord.io") // install using npm
 var config = require("config") // install using npm
 var https = require("https") // install using npm
 console.log("Loading configuration")
@@ -37,7 +37,7 @@ function streamManage(value, action, serverId, callback) { // update a server's 
 			}
 			twitchConfig["streamers"][value][serverId] = true
 			fs.writeFileSync("./twitchConfig.json", JSON.stringify(twitchConfig))
-			callback("added twitch streamer `" + value + "` to " + bot.servers[serverId].name + " (`" + serverId + "`)'s notify list")
+			callback("added twitch streamer `" + value + "` to `" + bot.servers[serverId].name + "`'s notify list")
 			tickTwitchCheck()
 		} else {
 			callback(":sos: twitch username invalid! make sure you're only using the streamer's username (the thing at the end of their URL)")
@@ -51,7 +51,7 @@ function streamManage(value, action, serverId, callback) { // update a server's 
 			delete twitchConfig["streamers"][value][serverId] //insert delet this meme here
 			console.log(twitchConfig)
 			fs.writeFileSync("./twitchConfig.json", JSON.stringify(twitchConfig))
-			callback("removed twitch streamer `" + value + "` from " + bot.servers[serverId].name + " (`" + serverId + "`)'s notify list")
+			callback("removed twitch streamer `" + value + "` from `" + bot.servers[serverId].name + "`'s notify list")
 			tickTwitchCheck()
 		} else {
 			callback(":sos: twitch username not found in this server's list!")
@@ -60,10 +60,13 @@ function streamManage(value, action, serverId, callback) { // update a server's 
 		if (bot.channels[value].name !== undefined) { // shitty error checking
 			twitchConfig["servers"][serverId] = value
 			fs.writeFileSync("./twitchConfig.json", JSON.stringify(twitchConfig))
-			callback("admin set " + bot.servers[serverId].name + " (`" + serverId + "`)'s notify channel to " + bot.channels[value].name + " (" + value + ")")
+			callback("admin set `" + bot.servers[serverId].name + "`'s notify channel to <#"+value+">")
 		} else {
 			throw ("channel not on this server, or does not exist!")
 		}
+	} else if (action == "wipenotify") {
+		twitchTempConfig = {}
+		callback("admin wiped twitchTempConfig! next `tickTwitchCheck()` will interpret currently live streams as newly-live!")
 	} else {
 		callback("called manageTwitchModule with invalid argument?? how did you do this?? <@" + configuration.adminUserId + "> please investigate")
 	}
@@ -160,12 +163,13 @@ function callbackToDiscordChannel(streamerName, streamerChannels, res) { // proc
 	} else { // stream isn't online
 		writeLog(streamerName + " offline", "TwitchNotifier",false)
 		if (twitchTempConfig[streamerName].online === true) {
+			writeLog(streamerName + " now offline", "TwitchNotifier")
 			// stream just went offline after we had seen it as online
 			streamerNameFancy = streamerName
 			try {
 				streamerNameFancy = twitchTempConfig[streamerName]["displayname"]
 			}catch (err) {
-				writeLog("WARNING: "+streamerName+" somehow fancyname was not stored, error: "+err,"TwitchNotifier")
+				writeLog("TwitchNotifier "+streamerName+" somehow fancyname was not stored, error: "+err,"Warning")
 				streamerNameFancy = streamerName
 			}
 			embedContents = { title: "Twitch streamer `"+streamerNameFancy+"` has stopped streaming...", "color": 0x9689b9}
@@ -183,9 +187,9 @@ function callbackToDiscordChannel(streamerName, streamerChannels, res) { // proc
 function tickTwitchCheck() { // iterate through stored twitch streamers list and check their stream's status
 	writeLog("Checking for stream state changes", "TwitchNotifier",false)
 	for (streamerName in twitchConfig["streamers"]) {
-		writeLog("streamer " + streamerName + " has " + Object.keys(twitchConfig["streamers"][streamerName]).length + " servers", "TwitchNotifier")
+		writeLog("streamer " + streamerName + " has " + Object.keys(twitchConfig["streamers"][streamerName]).length + " servers", "TwitchNotifier",false)
 		if (Object.keys(twitchConfig["streamers"][streamerName]).length === 0) {
-			writeLog("not checking and also removing " + streamerName, "TwitchNotifier")
+			writeLog("not checking and also removing " + streamerName, "TwitchNotifier",false)
 			delete twitchConfig["streamers"][streamerName]
 			fs.writeFileSync("./twitchConfig.json", JSON.stringify(twitchConfig))
 		} else {
@@ -199,7 +203,12 @@ function tickTwitchCheck() { // iterate through stored twitch streamers list and
 					writeLog("skip assoc " + streamerName + " to " + bot.servers[discordServer].name, "TwitchNotifier",false)
 				}
 			}
-			checkTwitch(streamerName, streamerChannels, callbackToDiscordChannel);
+			try {
+				checkTwitch(streamerName, streamerChannels, callbackToDiscordChannel);
+			} catch (error) {
+				writeLog("COULD NOT CHECK TWITCH STREAM! err: "+error,"Error");
+				bot.sendMessage({to:configuration.channelId,message:":sos: <@>: An error occured! `tickTwitchCheck(): checkTwitch("+streamerName+"): "+error+"`"})
+			}
 		}
 	}
 }
@@ -214,7 +223,7 @@ var bot = new Discord.Client({
 bot.on('ready', function() { // sets up and configures the bot's nicknames and stuff after the API initializes and is ready
 	writeLog("User ID: " + bot.id + ", Bot User: " + bot.username, "Discord")
 	writeLog("Add to your server using this link: ", "Discord");
-	writeLog(" https://discordapp.com/oauth2/authorize?client_id=" + bot.id + "&scope=bot&permissions=0 ", "Discord");
+	writeLog(" https://discordapp.com/oauth2/authorize?client_id=" + bot.id + "&scope=bot&permissions=67160064", "Discord");
 	writeLog("*** Bot ready! ***", "Discord")
 	bot.sendMessage({
 		to: configuration.channelId,
@@ -246,22 +255,45 @@ bot.on('message', function(user, userId, channelId, message, event) { // message
 	command = message.split(" ", 1).join(" ").toLowerCase()
 	argument = message.split(" ").slice(1).join(" ")
 	
-	writeLog("<" + user + "> " + message, "Channel - " + server + "/" + channel, false) // don't log channels to file
+	writeLog("<" + user + "> " + message, "Channel - " + server + "/" + channel, message.startsWith(configuration.commandPrefix)) // log everything to stdout, but log command usage to file
 	
 	if (command == configuration.commandPrefix + "ping") { // send a message to the channel as a ping-testing thing.
 		bot.sendMessage({
 			to: channelId,
 			message: ":heavy_check_mark: <@" + userId + ">: Pong!"
 		})
+	} else if (command == configuration.commandPrefix + "ping-embed") { // send a embed to the channel as a ping-testing thing.
+		bot.sendMessage({
+			to: channelId,
+			"embed": {
+				"title":"Pong!",
+				"description":":heavy_check_mark: Pong!",
+				"color": 0x9689b9,
+				"type": "rich",
+				"url":"https://arghlex.net/",
+				"fields": [
+					{
+						"name":"Hey " + user + "!",
+						"value":"It works!",
+						"inline":true
+					}
+				]
+			}
+		},function (err,resp) { if (err) {bot.sendMessage({
+			to: channelId,
+			message: ":sos: <@" + userId + ">: Embedded pong failed! Reason: `"+err +"` `"+resp+"`"
+		})}})
 	} else if (command == configuration.commandPrefix + "help") { // help page
 		message = ":question::book: <@" + userId.toString() + ">: __**Help Page**__\n"
 		message += "`" + configuration.commandPrefix + "help` - This output\n"
 		message += "`" + configuration.commandPrefix + "ping` - Returns pong\n"
-		message += "`" + configuration.commandPrefix + "addstream` - Adds a stream to notify a channel with.\n"
-		message += "`" + configuration.commandPrefix + "removestream` - Removes a stream to check.\n"
+		message += "`" + configuration.commandPrefix + "ping-embed` - Returns pong, but fancy\n"
+		message += "`" + configuration.commandPrefix + "addstream <twitch user>` - Adds a stream to notify a channel with.\n"
+		message += "`" + configuration.commandPrefix + "removestream <twitch user>` - Removes a stream to check.\n"
 		if (userId.toString() == configuration.adminUserId) {
 			message += "\n**Bot Administrative Commands (usable only by <@" + configuration.adminUserId + ">)**\n"
-			message += "`" + configuration.commandPrefix + "setTwitchNotifyChannel <string>` - Sets Twitch stream online/offline notifications channel\n"
+			message += "`" + configuration.commandPrefix + "setTwitchNotifyChannel <channel ID>` - Sets Twitch stream online/offline notifications channel\n"
+			message += "`" + configuration.commandPrefix + "forgetNotifyStatus` - wipes twitchTempConfig for diagnostic purposes\n"
 			message += "`" + configuration.commandPrefix + "setCurrentGame <string>` - Sets 'Playing' message to <string>\n"
 			message += "`" + configuration.commandPrefix + "setNickname <string>` - Sets server nickname to <string>\n"
 			message += "`" + configuration.commandPrefix + "setCmdPrefix <string>` - Sets prefix character(s) to <string> (resets to default after restart)\n"
@@ -271,7 +303,8 @@ bot.on('message', function(user, userId, channelId, message, event) { // message
 		}
 		message += "\nOpen source! Check out <https://github.com/ArghArgh200/twitch-notifier-bot>!\n"
 		message += "Donate to help cover running costs. <https://arghlex.net/?page=donate>\n"
-		message += "Add this bot to your server! <https://discordapp.com/oauth2/authorize?client_id=" + bot.id + "&scope=bot&permissions=0>"
+		message += "Add this bot to your server! <https://discordapp.com/oauth2/authorize?client_id=" + bot.id + "&scope=bot&permissions=67160064>\n"
+		message += "Bot version: `v0.2`"
 		bot.sendMessage({
 			to: channelId,
 			message: message
@@ -346,7 +379,21 @@ bot.on('message', function(user, userId, channelId, message, event) { // message
 			} catch (err) {
 				bot.sendMessage({
 					to: channelId,
-					message: ":sos: <@" + configuration.adminUserId + ">! An error occured:\n(): streamManage(channel): `" + err + "`"
+					message: ":sos: <@" + configuration.adminUserId + ">! An error occured:\n(): streamManage(setTwitchNotifyChannel): `" + err + "`"
+				})
+			}
+		} else if (command == configuration.commandPrefix + "forgetnotifystatus") {
+			try {
+				streamManage(argument, "wipenotify", serverId, function(embeddedObject) {
+					bot.sendMessage({
+						to: channelId,
+						"message": embeddedObject
+					})
+				})
+			} catch (err) {
+				bot.sendMessage({
+					to: channelId,
+					message: ":sos: <@" + configuration.adminUserId + ">! An error occured:\n(): streamManage(forgetNotifyStatus): `" + err + "`"
 				})
 			}
 		} else if (command == configuration.commandPrefix + "setcmdprefix") {
@@ -392,6 +439,6 @@ bot.on('message', function(user, userId, channelId, message, event) { // message
 	}
 })
 bot.on('disconnect', function(errMessage, code) { // disconnect handling, just hard-exits on disconnection, shell script will restart the bot after 5 seconds
-	writeLog("Disconnected from server! Code: " + code + ", Reason: " + errMessage, "Error")
+	writeLog("Disconnected from Discord! Code: " + code + ", Reason: " + errMessage, "Error")
 	process.exit(1)
 });

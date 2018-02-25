@@ -7,7 +7,7 @@ needs to be run on a linux machine (with bash and screen installed) for restart 
 
 install your dependencies:
 
-```npm install Woor/discord.io#gateway_v6 https config ```
+```npm install Woor/discord.io#gateway_v6 https config```
 
 
 ## configuration
