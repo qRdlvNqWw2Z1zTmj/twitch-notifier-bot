@@ -224,10 +224,6 @@ bot.on('ready', function() { // sets up and configures the bot's nicknames and s
 	writeLog("Add to your server using this link: ", "Discord");
 	writeLog(" https://discordapp.com/oauth2/authorize?client_id=" + bot.id + "&scope=bot&permissions=67160064", "Discord");
 	writeLog("*** Bot ready! ***", "Discord")
-	bot.sendMessage({
-		to: configuration.channelId,
-		message: ":ok: <@" + configuration.adminUserId + ">: Twitch Notifier Discord Bot back online! Type `" + configuration.commandPrefix + "help` for a list of commands."
-	})
 	bot.setPresence({
 		"game": {
 			"name": configuration.currentGame
@@ -437,7 +433,14 @@ bot.on('message', function(user, userId, channelId, message, event) { // message
 		}
 	}
 })
-bot.on('disconnect', function(errMessage, code) { // disconnect handling, just hard-exits on disconnection, shell script will restart the bot after 5 seconds
+bot.on('disconnect', function(errMessage, code) { // disconnect handling, reconnects unless shut down by restart
 	writeLog("Disconnected from Discord! Code: " + code + ", Reason: " + errMessage, "Error")
-	process.exit(1)
+	bot.connect()
+});
+
+bot.once('ready', () => {
+	bot.sendMessage({
+		to: configuration.channelId,
+		message: ":ok: Back online! Type `"+configuration.commandPrefix + "help` for a list of commands."
+	});
 });
