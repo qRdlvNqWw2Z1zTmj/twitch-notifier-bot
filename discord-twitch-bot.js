@@ -15,7 +15,6 @@ global.twitchTempConfig = {}
 
 // FUNCTIONS
 console.log("Loading functions")
-
 function writeLog(message, prefix, writeToFile) { // write a message with a prefix, by default mirroring to logfile
 	prefix = typeof prefix !== "undefined" ? prefix : "Debug"; // by default put [Debug] in front of the message
 	writeToFile = typeof writeToFile !== "undefined" ? writeToFile : true; // log everything to file by default
@@ -161,7 +160,7 @@ function callbackToDiscordChannel(streamerName, streamerChannels, res) { // proc
 			writeLog(streamerName + " still online, not sending", "TwitchNotifier",false)
 		}
 	} else { // stream isn't online
-		writeLog(streamerName + " offline", "TwitchNotifier",false)
+		//writeLog(streamerName + " offline", "TwitchNotifier",false)
 		if (twitchTempConfig[streamerName].online === true) {
 			writeLog(streamerName + " now offline", "TwitchNotifier")
 			// stream just went offline after we had seen it as online
@@ -198,7 +197,7 @@ function tickTwitchCheck() { // iterate through stored twitch streamers list and
 			for (discordServer in twitchConfig["streamers"][streamerName]) {
 				if (twitchConfig["servers"][discordServer] !== undefined) {
 					streamerChannels.push(twitchConfig["servers"][discordServer])
-					writeLog("assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
+					//writeLog("assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
 				} else {
 					writeLog("skip assoc " + streamerName + " to " + bot.servers[discordServer].name, "TwitchNotifier",false)
 				}
@@ -207,7 +206,7 @@ function tickTwitchCheck() { // iterate through stored twitch streamers list and
 				checkTwitch(streamerName, streamerChannels, callbackToDiscordChannel);
 			} catch (error) {
 				writeLog("COULD NOT CHECK TWITCH STREAM! err: "+error,"Error");
-				bot.sendMessage({to:configuration.channelId,message:":sos: <@>: An error occured! `tickTwitchCheck(): checkTwitch("+streamerName+"): "+error+"`"})
+				bot.sendMessage({to:configuration.channelId,message:":sos: <@"+configuration.adminUserId+">: An error occured! `tickTwitchCheck(): checkTwitch("+streamerName+"): "+error+"`"})
 			}
 		}
 	}
