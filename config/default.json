@@ -4,12 +4,12 @@
         "authToken": "discord bot user's auth token",
         "adminUserId": "your discord user ID",
         "channelId": "discord channel id to notify when bot comes online", 
-        "serverId": "not used, recommended to set to above channel's server",
-        "nickname": "Twitch Notifier Bot",
-        "currentGame": "with Twitch's API",
+        "serverId": "not used, recommended to set to above channel's owning server",
+        "nickname": "Example Twitch Notifier Bot",
+        "currentGame": "Twitch Simulator 2018", 
         "twitch": {
-            "interval": 60,
-			"token": "your bot's twitch application's token"
+		"interval": 300, # in seconds
+		"token": "your bot's twitch application's token"
         }
     }
 }
