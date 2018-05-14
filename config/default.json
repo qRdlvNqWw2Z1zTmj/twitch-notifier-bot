@@ -1,4 +1,4 @@
-{"configuration": {
+{ "configuration": {
         "commandPrefix": "!",
         "logfile": "./discord-twitch-bot.log",
         "authToken": "discord bot user's auth token",
@@ -8,8 +8,7 @@
         "nickname": "Example Twitch Notifier Bot",
         "currentGame": "Twitch Simulator 2018", 
         "twitch": {
-		"interval": 300, # in seconds
+		"interval": 300,
 		"token": "your bot's twitch application's token"
-        }
-    }
-}
+	}
+} }
