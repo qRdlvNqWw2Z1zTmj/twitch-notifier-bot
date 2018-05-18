@@ -1,31 +1,37 @@
 // Twitch Channel Checker Bot
 // by DJ Arghlex#1729
+
 // DEPENDENCIES
 console.log( "Loading dependencies" )
 const fs = require( "fs" ) // built-in to nodejs
 const Discord = require( "discord.io" ) // install using npm
 const config = require( "config" ) // install using npm
 const https = require( "https" ) // install using npm
+const path = require( "path" ) // built-in to nodejs
+
 console.log( "Loading configuration" )
 const configuration = config.get( "configuration" )
 const botName = "Twitch Notifier Bot"
 const botAuthor = "DJ Arghlex#1729"
-const botVersion = "0.3"
+
 // why the hell do i have to do this
 global.twitchConfig = {}
 global.twitchTempConfig = {}
-// FUNCTIONS
-console.log( "Loading functions" )
 
-function writeLog( message, prefix, writeToFile ) { // write a message with a prefix, by default mirroring to logfile
-	prefix = typeof prefix !== "undefined" ? prefix : "Debug"; // by default put [Debug] in front of the message
-	writeToFile = typeof writeToFile !== "undefined" ? writeToFile : true; // log everything to file by default
-	wholeMessage = "[" + prefix + "] " + message
-	console.log( "  " + wholeMessage )
-	if ( writeToFile == true ) {
-		fs.appendFileSync( configuration.logfile, wholeMessage + "\n" )
+// FUNCTIONS
+console.log( 'Loading functions' );
+let wholeMessage;
+// Core parts of the bot
+function writeLog( message, prefix, writeToFile ) {
+	if ( !prefix ) {
+		prefix = '[Debug]'; // By default put [Debug] in front of the message
 	}
-	return
+	writeToFile = typeof writeToFile !== 'undefined' ? writeToFile : true; // Log everything to file by default
+	wholeMessage = '[' + prefix + '] ' + message;
+	console.log( '  ' + wholeMessage );
+	if ( writeToFile === true ) {
+		fs.appendFileSync( path.basename( __filename ) + '.log', wholeMessage + '\n' );
+	}
 }
 
 function streamManage( value, action, serverId, callback ) { // update a server's stream notification preferences
@@ -95,21 +101,22 @@ function checkTwitch( streamerName, streamerChannels, callback ) { // check a tw
 			res.on( "end", () => {
 				var json;
 				try {
-					json = JSON.parse( body );
+					json = JSON.parse( body )
 				} catch ( err ) {
-					throw err;
-					return;
+					writeLog("Twitch API returned error: " + err,"TwitchAPI")
+					return
 				}
 				if ( json.status == 404 ) {
-					callback( streamerName, streamerChannels, undefined );
+					writeLog("Twitch API returned 404 for streamer: " + streamerName,"TwitchAPI")
+					return
 				} else {
-					callback( streamerName, streamerChannels, json );
+					callback( streamerName, streamerChannels, json )
 				}
-			} );
+			} )
 		} )
 		.on( "error", ( err ) => {
-			writeLog( "Error contacting Twitch API: " + err, "TwitchNotifier" )
-			return;
+			writeLog( "Error contacting Twitch API: " + err, "TwitchAPI" )
+			return
 		} );
 }
 
@@ -143,7 +150,7 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 				}
 				, footer: {
 					icon_url: "https://raw.githubusercontent.com/ArghArgh200/twitch-notifier-bot/master/icons/twitch-notifier.png"
-					, text: botName + ' v' + botVersion + ' by ' + botAuthor
+					, text: botName
 				}
 				, fields: [ {
 					"name": "Viewers"
@@ -183,7 +190,7 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 			embedContents = {
 				footer: {
 					icon_url: "https://raw.githubusercontent.com/ArghArgh200/twitch-notifier-bot/master/icons/twitch-notifier.png"
-					, text: botName + ' v' + botVersion + ' by ' + botAuthor
+					, text: botName
 				}
 				, title: "Twitch streamer `" + streamerNameFancy + "` has stopped streaming..."
 				, "color": 0x9689b9
@@ -257,6 +264,10 @@ bot.on( 'ready', function() { // sets up and configures the bot's nicknames and 
 	setInterval( tickTwitchCheck, configuration.twitch.interval * 1000 );
 } )
 bot.on( 'message', function( user, userId, channelId, message, event ) { // message handling system
+	if ( bot.channels[ channelId ] == undefined ) {
+		writeLog("Ignoring PM from "+user, "Discord", false)
+		return
+	}
 	serverId = bot.channels[ channelId ][ "guild_id" ]
 	server = bot.servers[ serverId ].name
 	channel = "#" + bot.channels[ channelId ].name
@@ -324,17 +335,12 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 			, inline: true
 		} );
 		returnedEmbedObject.fields.push( {
-			name: configuration.commandPrefix + 'time'
-			, value: 'Returns current ingame date and time.'
-			, inline: true
-		} );
-		returnedEmbedObject.fields.push( {
-			name: configuration.commandPrefix + "addstream <twitch user>`"
+			name: configuration.commandPrefix + "addstream <twitch user>"
 			, value: "Adds a Twitch stream to notify a channel with."
 			, inline: true
 		} );
 		returnedEmbedObject.fields.push( {
-			name: configuration.commandPrefix + "removestream <twitch user>`"
+			name: configuration.commandPrefix + "removestream <twitch user>"
 			, value: "Removes a Twitch stream to check."
 			, inline: true
 		} );
@@ -366,6 +372,11 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 			returnedEmbedObject.fields.push( {
 				name: configuration.commandPrefix + 'setCmdPrefix <string>'
 				, value: 'Sets prefix character(s) to <string>'
+				, inline: true
+			} );
+			returnedEmbedObject.fields.push( {
+				name: configuration.commandPrefix + 'repeatme <string>'
+				, value: 'Says <string> in current channel.'
 				, inline: true
 			} );
 			returnedEmbedObject.fields.push( {
@@ -478,16 +489,25 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 					to: channelId
 					, message: "<@" + configuration.adminUserId + ">:\n:ok: **Command prefix set to:** `" + configuration.commandPrefix + "`\nThis will reset to default if bot restarts."
 				} )
-				bot.setPresence( {
-					"game": {
-						"name": configuration.currentGame
-					}
-				} );
 				writeLog( "Command prefix changed to: " + configuration.commandPrefix, "Discord" )
 			} catch ( err ) {
 				bot.sendMessage( {
 					to: channelId
 					, message: "<@" + configuration.adminUserId + ">:\n:sos: **An error occured!**\n discordSetCmdPrefix(): `" + err + '`'
+				} )
+				writeLog( err, "Error" )
+			}
+		} else if ( command == configuration.commandPrefix + "repeatme" ) {
+			try {
+				bot.sendMessage( {
+					to: channelId
+					, message: argument
+				} )
+				writeLog( "Command prefix changed to: " + configuration.commandPrefix, "Discord" )
+			} catch ( err ) {
+				bot.sendMessage( {
+					to: channelId
+					, message: "<@" + configuration.adminUserId + ">:\n:sos: **An error occured!**\n repeatme(): `" + err + '`'
 				} )
 				writeLog( err, "Error" )
 			}
@@ -513,13 +533,15 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 		}
 	}
 } )
+
 bot.on( 'disconnect', function( errMessage, code ) { // disconnect handling, reconnects unless shut down by restart
-	writeLog( "Disconnected from Discord! Code: " + code + ", Reason: " + errMessage, "Error" )
-	bot.connect()
+	writeLog( 'Disconnected from Discord! Code: ' + code + ', Reason: ' + errMessage, 'Error' )
+	setTimeout(bot.connect, 5000)
 } );
+
 bot.once( 'ready', () => {
 	bot.sendMessage( {
 		to: configuration.channelId
-		, message: ":ok: Back online! Type `" + configuration.commandPrefix + "help` for a list of commands."
+		, message: ':ok: ' + botName + ' `v' + botVersion + '` by '+ botAuthor +' Back online! Type `' + configuration.commandPrefix + 'help` for a list of commands.'
 	} );
 } );
