@@ -1,5 +1,5 @@
 # twitch-notifier-bot
-Discord bot to notify multiple servers (in set channels) when a Twitch streamer goes live. Uses some code (and principles) from (<https://github.com/fuyuneko/discord-twitch-bot>)[fuyuneko's bot]
+Discord bot to notify multiple servers (in set channels) when a Twitch streamer goes live. Uses some code (and principles) from [fuyuneko's bot](<https://github.com/fuyuneko/discord-twitch-bot>)
 
 ## installation
 
@@ -38,4 +38,4 @@ known caveat: currently anyone and everyone can tell the bot to start monitoring
 
 ## todo
 
-(<https://github.com/DJArghlex/twitch-notifier-bot/issues/3>)[see #3]
+https://github.com/DJArghlex/twitch-notifier-bot/issues?q=label%3Aenhancement+
