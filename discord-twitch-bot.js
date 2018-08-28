@@ -13,7 +13,7 @@ console.log( "Loading configuration" )
 const configuration = config.get( "configuration" )
 const botName = "Twitch Notifier Bot"
 const botAuthor = "DJ Arghlex#1729"
-const botVersion = "0.4"
+const botVersion = "0.3.5"
 
 // why the hell do i have to do this
 global.twitchConfig = {}
@@ -220,11 +220,16 @@ function tickTwitchCheck() { // iterate through stored twitch streamers list and
 			//writeLog("check " + streamerName, "TwitchNotifier",false)
 			streamerChannels = [] // flush every time
 			for ( discordServer in twitchConfig[ "streamers" ][ streamerName ] ) {
-				if ( twitchConfig[ "servers" ][ discordServer ] !== undefined ) {
-					streamerChannels.push( twitchConfig[ "servers" ][ discordServer ] )
-					//writeLog("assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
+				if ( bot.servers[discordServer] === undefined ) {
+					// bot has old entries for a departed server
+					writeLog("assocfail " + streamerName + " to " + discordServer + ", reason notjoined" ,"TwitchNotifier",false)
 				} else {
-					writeLog( "skip assoc " + streamerName + " to " + bot.servers[ discordServer ].name, "TwitchNotifier", false )
+					if ( twitchConfig[ "servers" ][ discordServer ] !== undefined ) {
+						streamerChannels.push( twitchConfig[ "servers" ][ discordServer ] )
+						//writeLog("assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
+					} else {
+						writeLog( "skip assoc " + streamerName + " to " + bot.servers[ discordServer ].name, "TwitchNotifier", false )
+					}
 				}
 			}
 			try {
