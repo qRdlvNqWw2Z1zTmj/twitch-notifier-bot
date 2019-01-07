@@ -13,7 +13,7 @@ console.log( "Loading configuration" )
 const configuration = config.get( "configuration" )
 const botName = "Twitch Notifier Bot"
 const botAuthor = "DJ Arghlex#1729"
-const botVersion = "0.3.5"
+const botVersion = "0.3.5.1"
 
 // why the hell do i have to do this
 global.twitchConfig = {}
@@ -208,27 +208,28 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 }
 
 function tickTwitchCheck() { // iterate through stored twitch streamers list and check their stream's status
-	//writeLog("Checking for stream state changes", "TwitchNotifier",false)
+	writeLog("Checking for stream state changes...", "TwitchNotifier",false)
 	for ( streamerName in twitchConfig[ "streamers" ] ) {
 		//writeLog("streamer " + streamerName + " has " + Object.keys(twitchConfig["streamers"][streamerName]).length + " servers", "TwitchNotifier",false)
-		if ( Object.keys( twitchConfig[ "streamers" ][ streamerName ] )
-			.length === 0 ) {
-			writeLog( "not checking and also removing " + streamerName, "TwitchNotifier", false )
+		if ( Object.keys( twitchConfig[ "streamers" ][ streamerName ] ) .length === 0 ) {
+			writeLog( "removing " + streamerName + " (no servers subscribed)", "TwitchNotifier", false )
 			delete twitchConfig[ "streamers" ][ streamerName ]
 			fs.writeFileSync( "./twitchConfig.json", JSON.stringify( twitchConfig ) )
 		} else {
-			//writeLog("check " + streamerName, "TwitchNotifier",false)
+			//writeLog("assoccheck " + streamerName, "TwitchNotifier",false)
 			streamerChannels = [] // flush every time
 			for ( discordServer in twitchConfig[ "streamers" ][ streamerName ] ) {
 				if ( bot.servers[discordServer] === undefined ) {
 					// bot has old entries for a departed server
-					writeLog("assocfail " + streamerName + " to " + discordServer + ", reason notjoined" ,"TwitchNotifier",false)
+					writeLog("fail assoc " + streamerName + " to " + discordServer + " (bot not on server)" ,"TwitchNotifier",false)
+					delete twitchConfig[ "streamers" ][ streamerName ][ discordServer ]
+					fs.writeFileSync( "./twitchConfig.json", JSON.stringify( twitchConfig ) )
 				} else {
 					if ( twitchConfig[ "servers" ][ discordServer ] !== undefined ) {
 						streamerChannels.push( twitchConfig[ "servers" ][ discordServer ] )
-						//writeLog("assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
+						//writeLog("success assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
 					} else {
-						writeLog( "skip assoc " + streamerName + " to " + bot.servers[ discordServer ].name, "TwitchNotifier", false )
+						writeLog( "skip assoc " + streamerName + " to " + bot.servers[ discordServer ].name + " (notify channel unset)", "TwitchNotifier", false )
 					}
 				}
 			}
@@ -317,8 +318,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 	} else if (arguments[0] == 'broadcast') {
 		for (server in bot.servers) {
 			const returnedEmbedObject = {
-				timestamp
-				, footer: {
+				footer: {
 					icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
 					, text: botName
 				}
@@ -382,8 +382,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 
 	} else if (arguments[0] == 'help') { // help sub-page
 		const returnedEmbedObject = { // totally overwrites the one set outside the logic above. this is intentional.
-			timestamp
-			, footer: {
+			footer: {
 				icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
 				, text: botName
 			}
@@ -457,7 +456,7 @@ bot.on( 'ready', function() { // sets up and configures the bot's nicknames and 
 			"name": configuration.currentGame
 		}
 	} );
-	writeLog( "Reading settings file...", "TwitchNotifier" );
+	writeLog( "Reading settings file...", "TwitchNotifier startup" );
 	const file = fs.readFileSync( "./twitchConfig.json", {
 		encoding: "utf-8"
 	} );
