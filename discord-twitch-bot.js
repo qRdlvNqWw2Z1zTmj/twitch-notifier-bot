@@ -13,7 +13,6 @@ console.log( "Loading configuration" )
 const configuration = config.get( "configuration" )
 const botName = "Twitch Notifier Bot"
 const botAuthor = "DJ Arghlex#1729"
-const botVersion = "0.3.5.1"
 
 // why the hell do i have to do this
 global.twitchConfig = {}
@@ -28,7 +27,8 @@ function writeLog( message, prefix, writeToFile ) {
 		prefix = '[Debug]'; // By default put [Debug] in front of the message
 	}
 	writeToFile = typeof writeToFile !== 'undefined' ? writeToFile : true; // Log everything to file by default
-	wholeMessage = '[' + prefix + '] ' + message;
+	const logtimestamp = new Date(Date.now()).toISOString().split('.')[0].split('T').join(' '); // i hate javascript
+	wholeMessage = '[' + logtimestamp +'] [' + prefix + '] ' + message;
 	console.log( '  ' + wholeMessage );
 	if ( writeToFile === true ) {
 		fs.appendFileSync( path.basename( __filename ) + '.log', wholeMessage + '\n' );
@@ -72,9 +72,6 @@ function streamManage( value, action, serverId, callback ) { // update a server'
 		} else {
 			throw ( "channel not on this server, or does not exist!" )
 		}
-	} else if ( action == "wipenotify" ) {
-		twitchTempConfig = {}
-		callback( "admin wiped twitchTempConfig! next `tickTwitchCheck()` will interpret currently live streams as newly-live!" )
 	} else {
 		callback( "called manageTwitchModule with invalid argument?? how did you do this?? <@" + configuration.adminUserId + "> please investigate" )
 	}
@@ -151,7 +148,7 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 				}
 				, footer: {
 					icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
-					, text: botName
+					, text: botName + " v" + botVersion
 				}
 				, fields: [ {
 					"name": "Viewers"
@@ -174,10 +171,10 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 				} )
 			}
 		} else { // stream still online
-			//writeLog(streamerName + " still online, not sending", "TwitchNotifier",false)
+			writeLog("status " + streamerName + " still online, not sending", "TwitchNotifier",false)
 		}
 	} else { // stream isn't online
-		//writeLog(streamerName + " offline", "TwitchNotifier",false)
+		writeLog("status " + streamerName + " offline", "TwitchNotifier",false)
 		if ( twitchTempConfig[ streamerName ].online === true ) {
 			writeLog( streamerName + " now offline", "TwitchNotifier" )
 			// stream just went offline after we had seen it as online
@@ -191,7 +188,7 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 			embedContents = {
 				footer: {
 					icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
-					, text: botName
+					, text: botName + " v" + botVersion
 				}
 				, title: "Twitch streamer `" + streamerNameFancy + "` has stopped streaming..."
 				, "color": 0x9689b9
@@ -210,13 +207,13 @@ function callbackToDiscordChannel( streamerName, streamerChannels, res ) { // pr
 function tickTwitchCheck() { // iterate through stored twitch streamers list and check their stream's status
 	writeLog("Checking for stream state changes...", "TwitchNotifier",false)
 	for ( streamerName in twitchConfig[ "streamers" ] ) {
-		//writeLog("streamer " + streamerName + " has " + Object.keys(twitchConfig["streamers"][streamerName]).length + " servers", "TwitchNotifier",false)
+		writeLog("streamer " + streamerName + " has " + Object.keys(twitchConfig["streamers"][streamerName]).length + " servers", "TwitchNotifier",false)
 		if ( Object.keys( twitchConfig[ "streamers" ][ streamerName ] ) .length === 0 ) {
 			writeLog( "removing " + streamerName + " (no servers subscribed)", "TwitchNotifier", false )
 			delete twitchConfig[ "streamers" ][ streamerName ]
 			fs.writeFileSync( "./twitchConfig.json", JSON.stringify( twitchConfig ) )
 		} else {
-			//writeLog("assoccheck " + streamerName, "TwitchNotifier",false)
+			writeLog("assoccheck " + streamerName, "TwitchNotifier",false)
 			streamerChannels = [] // flush every time
 			for ( discordServer in twitchConfig[ "streamers" ][ streamerName ] ) {
 				if ( bot.servers[discordServer] === undefined ) {
@@ -227,7 +224,7 @@ function tickTwitchCheck() { // iterate through stored twitch streamers list and
 				} else {
 					if ( twitchConfig[ "servers" ][ discordServer ] !== undefined ) {
 						streamerChannels.push( twitchConfig[ "servers" ][ discordServer ] )
-						//writeLog("success assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
+						writeLog("success assoc " + streamerName + " to " + bot.channels[twitchConfig["servers"][discordServer]].name + " channel in " + bot.servers[discordServer].name, "TwitchNotifier",false)
 					} else {
 						writeLog( "skip assoc " + streamerName + " to " + bot.servers[ discordServer ].name + " (notify channel unset)", "TwitchNotifier", false )
 					}
@@ -251,7 +248,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 	const returnedEmbedObject = {
 		footer: {
 			icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
-			, text: botName
+			, text: botName + " v" + botVersion
 		}
 		, title: 'empty title'
 		, description: 'empty description'
@@ -298,7 +295,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 
 			writeLog('Left server `'+servername+'`', 'Management')
 			returnedEmbedObject.title = 'Success!'
-			returnedEmbedObject.description = 'Left server *servername*'
+			returnedEmbedObject.description = 'Left server *'+servername+'*'
 			callback(returnedEmbedObject)
 			return
 
@@ -320,7 +317,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 			const returnedEmbedObject = {
 				footer: {
 					icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
-					, text: botName
+					, text: botName + " v" + botVersion
 				}
 				, title: 'Message from Bot Administrator <@' + configuration.adminUserId + '> (DJ Arghlex#1729)'
 				, description: arguments.slice(1).join(' ')
@@ -356,9 +353,17 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 		} )
 		writeLog( 'Currently Playing Game set to: ' + arguments.slice(1).join(' '), 'Management' )
 
-		writeLog('Overwrote command prefix to `'+arguments.slice(1).join(' ')+'`', 'Management')
 		returnedEmbedObject.title = 'Success!'
 		returnedEmbedObject.description = 'Set the Now Playing message to `'+ arguments.slice(1).join(' ') +'`. This change will revert when the bot next restarts.'
+		callback(returnedEmbedObject)
+		return
+
+
+	} else if (arguments[0] == 'wipenotifystatus') { // wipe twitchnotifier's currently-online list
+		writeLog( 'Wiping TwitchNotifier\'s TwitchTempConfig', 'Management' )
+		twitchTempConfig = {}
+		returnedEmbedObject.title = 'Success!'
+		returnedEmbedObject.description = 'Wiped `twitchTempConfig` storage variable. Currently live streams will be treated as newly-live, and notifications will be posted for them at the next check.'
 		callback(returnedEmbedObject)
 		return
 
@@ -384,7 +389,7 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 		const returnedEmbedObject = { // totally overwrites the one set outside the logic above. this is intentional.
 			footer: {
 				icon_url: "https://raw.githubusercontent.com/DJArghlex/twitch-notifier-bot/master/icons/twitch-notifier.png"
-				, text: botName
+				, text: botName + " v" + botVersion
 			}
 			, author: {
 				name: 'Bot Mgmt Help'
@@ -397,6 +402,11 @@ function botManagement ( argument, callback ) { // do server/bot management stuf
 		returnedEmbedObject.fields.push( {
 			name: configuration.commandPrefix + 'botmanagement help'
 			, value: 'This output'
+			, inline: true
+		} );
+		returnedEmbedObject.fields.push( {
+			name: configuration.commandPrefix + 'botmanagement wipeNotifyStatus'
+			, value: 'Wipes TwitchTempConfig for diagnostic purposes.'
 			, inline: true
 		} );
 		returnedEmbedObject.fields.push( {
@@ -546,6 +556,16 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 			, value: "Removes a Twitch stream to check."
 			, inline: true
 		} );
+		returnedEmbedObject.fields.push( {
+			name: "~~"+configuration.commandPrefix + "forgetNotifyStatus~~"
+			, value: "~~wipes twitchTempConfig for diagnostic purposes~~\nMoved to `!botmanagement wipeNotifyStatus`"
+			, inline: true
+		} );
+		returnedEmbedObject.fields.push( {
+			name: configuration.commandPrefix + 'restart'
+			, value: 'Restarts the bot.'
+			, inline: true
+		} );
 		if ( userId.toString() === configuration.adminUserId ) {
 			returnedEmbedObject.fields.push( {
 				name: '__**Administrative Commands**__'
@@ -554,16 +574,6 @@ bot.on( 'message', function( user, userId, channelId, message, event ) { // mess
 			returnedEmbedObject.fields.push( {
 				name: configuration.commandPrefix + "setTwitchNotifyChannel <channel ID>"
 				, value: "Sets Twitch stream online/offline notifications channel"
-				, inline: true
-			} );
-			returnedEmbedObject.fields.push( {
-				name: configuration.commandPrefix + "forgetNotifyStatus"
-				, value: "wipes twitchTempConfig for diagnostic purposes"
-				, inline: true
-			} );
-			returnedEmbedObject.fields.push( {
-				name: configuration.commandPrefix + 'restart'
-				, value: 'Restarts the bot.'
 				, inline: true
 			} );
 			returnedEmbedObject.fields.push( {
